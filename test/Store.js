@@ -13,8 +13,8 @@ contract('Store', async (accounts) => {
   })
 
   it('adds new product (owner)', async() => {
-    await storeInstance.addProduct(111, 2, { from: owner })
-    await storeInstance.addProduct(222, 2, { from: owner })
+    await storeInstance.addProduct(111, 2, 1, { from: owner })
+    await storeInstance.addProduct(222, 2, 3, { from: owner })
 
     let productIds = await storeInstance.getAvailableProducts.call({ from: customer1 })
 
@@ -24,27 +24,27 @@ contract('Store', async (accounts) => {
   })
 
   it('fails to add same product twice', async() => {
-    await storeInstance.addProduct(333, 2, { from: owner })
+    await storeInstance.addProduct(333, 2, 3, { from: owner })
     
     await assertRevertError(
-      storeInstance.addProduct(333, 2, { from: owner })
+      storeInstance.addProduct(333, 2, 3, { from: owner })
     )
   })
 
   it('fails to add product with zero quantity', async() => {
     await assertRevertError(
-      storeInstance.addProduct(444, 0, { from: owner })
+      storeInstance.addProduct(444, 0, 3, { from: owner })
     )
   })
 
   it('fails to add product (customer)', async() => {
     await assertRevertError(
-      storeInstance.addProduct(555, 1, { from: customer1 })
+      storeInstance.addProduct(555, 1, 3, { from: customer1 })
     )
   })
 
   it('updates the quantity (owner)', async() => {
-    await storeInstance.addProduct(666, 1, { from: owner })
+    await storeInstance.addProduct(666, 1, 3, { from: owner })
     await storeInstance.updateQuantity(666, 0, { from: owner })
 
     let ids = await storeInstance.getAvailableProducts.call({ from: customer1 })
@@ -59,7 +59,7 @@ contract('Store', async (accounts) => {
   })
 
   it('fails to update the quantity (customer)', async() => {
-    await storeInstance.addProduct(888, 1, { from: owner })
+    await storeInstance.addProduct(888, 1, 3, { from: owner })
 
     await assertRevertError(
       storeInstance.updateQuantity(888, 0, { from: customer1 })
@@ -67,10 +67,10 @@ contract('Store', async (accounts) => {
   })
 
   it('buys a product (customer)', async() => {
-    await storeInstance.addProduct(999, 2, { from: owner })
+    await storeInstance.addProduct(999, 2, 3, { from: owner })
 
-    await storeInstance.buyProduct(999, { from: customer1 })
-    await storeInstance.buyProduct(999, { from: customer2 })
+    await storeInstance.buyProduct(999, { from: customer1, value: web3.utils.toWei('3', 'ether') })
+    await storeInstance.buyProduct(999, { from: customer2, value: web3.utils.toWei('3', 'ether') })
 
     let productIds = await storeInstance.getAvailableProducts.call({ from: customer1 })
 
@@ -79,25 +79,25 @@ contract('Store', async (accounts) => {
 
   it('fails to buy a non existing product (customer)', async() => {
     await assertRevertError(
-      storeInstance.buyProduct(123, { from: customer2 })
+      storeInstance.buyProduct(123, { from: customer2, value: web3.utils.toWei('3', 'ether') })
     )
   })
 
   it('fails to buy a sold out product (customer)', async() => {
     await assertRevertError(
-      storeInstance.buyProduct(123, { from: customer2 })
+      storeInstance.buyProduct(123, { from: customer2, value: web3.utils.toWei('3', 'ether') })
     )
   })
 
   it('fails to buy the same product twice (customer)', async() => {
-    await storeInstance.addProduct(101, 2, { from: owner })
-    await storeInstance.buyProduct(101, { from: customer1 })
+    await storeInstance.addProduct(101, 2, 3, { from: owner })
+    await storeInstance.buyProduct(101, { from: customer1, value: web3.utils.toWei('3', 'ether') })
 
     await assertRevertError(
-      storeInstance.buyProduct(101, { from: customer1 })
+      storeInstance.buyProduct(101, { from: customer1, value: web3.utils.toWei('3', 'ether') })
     )
 
-    await storeInstance.buyProduct(101, { from: customer2 })
+    await storeInstance.buyProduct(101, { from: customer2, value: web3.utils.toWei('3', 'ether') })
 
     let productIds = await storeInstance.getAvailableProducts.call({ from: customer1 })
 
@@ -105,19 +105,19 @@ contract('Store', async (accounts) => {
   })
 
   it('fails to buy a product (owner)', async() => {
-    storeInstance.addProduct(202, 1, { from: owner })
+    storeInstance.addProduct(202, 1, 3, { from: owner })
 
     await assertRevertError(
-      storeInstance.buyProduct(202, { from: owner })
+      storeInstance.buyProduct(202, { from: owner, value: web3.utils.toWei('3', 'ether') })
     )
   })
 
   it('returns previously bought product (customer)', async() => {
-    await storeInstance.addProduct(303, 1, { from: owner })
-    await storeInstance.buyProduct(303, { from: customer1 })
-    await storeInstance.returnProduct(303, { from: customer1 })
+    await storeInstance.addProduct(303, 1, 3, { from: owner })
+    await storeInstance.buyProduct(303, { from: customer2, value: web3.utils.toWei('3', 'ether') })
+    await storeInstance.returnProduct(303, { from: customer2 })
 
-    let productIds = await storeInstance.getAvailableProducts.call({ from: customer1 })
+    let productIds = await storeInstance.getAvailableProducts.call({ from: customer2 })
 
     assert.equal(1, productIds.length)
   })
@@ -129,8 +129,8 @@ contract('Store', async (accounts) => {
   })
 
   it('fails to return previously bought product in the eligable timeframe (customer)', async() => {
-    await storeInstance.addProduct(505, 1, { from: owner })
-    await storeInstance.buyProduct(505, { from: customer1 })
+    await storeInstance.addProduct(505, 1, 3, { from: owner })
+    await storeInstance.buyProduct(505, { from: customer2, value: web3.utils.toWei('3', 'ether') })
     
     // mine additional 100 blocks
     for (let i = 1; i <= 100; i++) {
@@ -138,10 +138,10 @@ contract('Store', async (accounts) => {
     }
 
     await assertRevertError(
-      storeInstance.returnProduct(505, { from: customer1 })
+      storeInstance.returnProduct(505, { from: customer2 })
     )
 
-    let productIds = await storeInstance.getAvailableProducts.call({ from: customer1 })
+    let productIds = await storeInstance.getAvailableProducts.call({ from: customer2 })
 
     assert.equal(0, productIds.length)
   })
