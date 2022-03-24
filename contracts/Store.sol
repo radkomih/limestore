@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.10;
+pragma solidity 0.8.9;
 
 error AuthorizationError(string message);
 error ProductMissingError(string message);
@@ -13,7 +13,7 @@ contract Ownable {
     address public owner;
     
     modifier onlyOwner() {
-        require(msg.sender == owner, "Only allowed for the owner.");
+        require(msg.sender == owner, "Only the owner is allowed.");
         _;
     }
     
@@ -24,32 +24,37 @@ contract Ownable {
 
 contract Store is Ownable {
 
-    /// @dev fast lookup if a product is added to the store
+    /// @dev for fast lookup whether a product is already added to the store
     mapping (uint => bool) private productsCatalog;
 
-    /// @dev fast lookup of which products are available to purchase
+    /// @dev for fast lookup of products that are still available to purchase
     uint[] private availableProducts;
 
-    /// @dev keeps track of the indexes of each product id
+    /// @dev keeps track of the indexes of all available product ids
     mapping (uint => int) private productsIndexes;
 
     /// @dev keeps track of all products quantities
-    mapping (uint => uint) public productsQuantities;
+    mapping (uint => uint) private productsQuantities;
 
     /// @dev keeps track of all products prices
-    mapping (uint => uint) public productsPrices;
+    mapping (uint => uint) private productsPrices;
 
-    /// @dev fast lookup of the customers that bought a specific product
+    /// @dev for fast lookup of the customers that bought specific product
     mapping (uint => address[]) private productsOrders;
 
-    /// @dev fast lookup if a customer has bought the product only once
+    /// @dev for fast lookup whether a customer has bought a specific product only once
     mapping (address => mapping (uint => bool)) private customersOrders;
 
-    /// @dev keeps track of the orders timestamps (since it is not allowed for customer to buy specific product more than once)
+    /// @dev keeps track of orders timestamps (since it is not allowed for a customer to buy a specific product more than once)
     mapping (address => mapping (uint => uint)) private customersOrdersTimestamps;
     
-    /// @dev keeps track of totals by customer, product and price
+    /// @dev keeps track of the order totals by customer, product, and price
     mapping (address => mapping (uint => uint)) public totalsByCustomerAndProduct;
+
+    event ProductAdded(uint indexed productId, uint quantity, uint price);
+    event QuantityUpdated(uint indexed productId, uint quantity);
+    event OrderPlaced(uint indexed productId);
+    event ReturnInitiated(uint indexed productId);
 
     modifier onlyCustomer() {
         if (msg.sender == owner) {
@@ -67,7 +72,7 @@ contract Store is Ownable {
 
     /// @notice The owner of the store should be able to add new products and the quantity of them.
     /// @notice The owner should not be able to add the same product twice, just quantity.
-    /// @dev if we don't expect explicit error to be thrown, single mapping of product id to quantity is sufficient to prevent duplicate entries.
+    /// @dev if we don't expect an explicit error to be thrown, a single mapping of product id to quantity is sufficient to prevent duplicate entries.
     function addProduct(uint _productId, uint _quantity, uint _price) external onlyOwner {
         if (productsCatalog[_productId]) {
             revert ProductDuplicationError("It has already been added.");
@@ -81,6 +86,8 @@ contract Store is Ownable {
         _makeAvailable(_productId);
         productsQuantities[_productId] = _quantity;
         productsPrices[_productId] = _price;
+
+        emit ProductAdded(_productId, _quantity, _price);
     }
 
     /// @notice The owner should be able to addjust the quantity.
@@ -94,6 +101,8 @@ contract Store is Ownable {
         }
         
         productsQuantities[_productId] = _quantity;
+
+        emit QuantityUpdated(_productId, _quantity);
     }
 
     /// @notice Customers should be able to buy products by their id.
@@ -101,7 +110,7 @@ contract Store is Ownable {
     /// @notice The customers should not be able to buy a product more times than the quantity in the store unless a product is returned or added by the owner.
     /// @dev requirements impose to use block number instead of actual timestamp
     function buyProduct(uint _productId) external payable onlyCustomer ifProductExists(_productId) {        
-        if (productsQuantities[_productId] <= 0) {
+        if (productsQuantities[_productId] == 0) {
             revert ProductQuantityError("It is sold out.");
         }
 
@@ -110,31 +119,38 @@ contract Store is Ownable {
             revert OrderError("The customer has already bought the same product.");
         }
         
-        if (msg.value < productsPrices[_productId]) {
+        uint price = productsPrices[_productId];
+        if (msg.value < price) {
             revert PaymentError("The amount is not enought.");
         }
 
         customersOrders[customer][_productId] = true;
-        productsQuantities[_productId] -= 1;
 
-        uint price = productsPrices[_productId];
-        totalsByCustomerAndProduct[customer][_productId] += price;
-
-        uint change = msg.value - _toWei(price); 
-        if (change != 0) {
-            payable(msg.sender).transfer(change);
+        if (customersOrdersTimestamps[customer][_productId] == 0) {
+            customersOrdersTimestamps[customer][_productId] = block.number;
+            productsOrders[_productId].push(customer);
+        } else {
+            customersOrdersTimestamps[customer][_productId] = block.number;
         }
+
+        productsQuantities[_productId] -= 1;
 
         if (productsQuantities[_productId] == 0) {
              _makeUnavailable(_productId);
         }
 
-        customersOrdersTimestamps[customer][_productId] = block.number;
-        productsOrders[_productId].push(customer);
+        totalsByCustomerAndProduct[customer][_productId] += price;
+        
+        uint change = msg.value - _toWei(price);
+        if (change != 0) {
+            payable(msg.sender).transfer(change);
+        }
+
+        emit OrderPlaced(_productId);
     }
 
     /// @notice Customers should be able to return products if they are not satisfied (within a certain period in blocktime: 100 blocks).
-    /// @dev returning a product does not change the fact that a customer has purchased it
+    /// @dev does returning a product change the fact that a customer has ever bought it?
     function returnProduct(uint _productId) external onlyCustomer {
         address customer = msg.sender;
         if (!customersOrders[customer][_productId]) {
@@ -146,9 +162,10 @@ contract Store is Ownable {
             revert ReturnError("The deadline is not met.");
         }
 
+        customersOrders[customer][_productId] = false;
+        
         if (productsQuantities[_productId] == 0) {
             _makeAvailable(_productId);
-            customersOrders[customer][_productId] = false;
         }
 
         productsQuantities[_productId] += 1;
@@ -157,13 +174,9 @@ contract Store is Ownable {
         totalsByCustomerAndProduct[customer][_productId] -= price;
 
         uint refund = _toWei(price); 
-        if (refund != 0) {
-            payable(msg.sender).transfer(refund);
-        }
+        payable(msg.sender).transfer(refund);
 
-        if (productsQuantities[_productId] == 0) {
-             _makeUnavailable(_productId);
-        }
+        emit ReturnInitiated(_productId);
     }
 
     /// @notice Customers should be able to see the available products.
@@ -176,7 +189,7 @@ contract Store is Ownable {
         return productsOrders[_productId];
     }
 
-    function getTotalBallance() external view returns (uint) {
+    function getTotalBallance() external view onlyOwner returns (uint) {
         return address(this).balance;
     }
 

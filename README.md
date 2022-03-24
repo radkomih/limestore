@@ -1,6 +1,5 @@
 # Run Tests
-```sh
-  npm i
-  ganache-cli
-  truffle test
+```shell
+npm i
+npx hardhat test
 ```
