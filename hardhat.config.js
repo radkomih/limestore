@@ -15,6 +15,13 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
   }
 });
 
+task("deploy-ropsten", "Deploy to Ropsten test network")
+  .addParam("privateKey", "Please provide a private key")
+  .setAction(async ({ privateKey }) => {
+    const deployToRopsten = require("./scripts/deploy-ropsten");
+    await deployToRopsten(privateKey);
+  });
+
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
 
@@ -25,9 +32,8 @@ module.exports = {
   solidity: "0.8.9",
   networks: {
     ropsten: {
-      url: process.env.ROPSTEN_URL || "",
-      accounts:
-        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+      url: `${process.env.ROPSTEN_INFURA_URL}${process.env.ROPSTEN_INFURA_APIKEY}`,
+      accounts: [`${process.env.PRIVATE_KEY1}`],
     },
   },
   gasReporter: {
@@ -35,6 +41,6 @@ module.exports = {
     currency: "USD",
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY,
+    apiKey: process.env.ROPSTEN_ETHERSCAN_API_KEY,
   },
 };
