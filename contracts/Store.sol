@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+pragma solidity 0.8.5;
 
 error AuthorizationError(string message);
 error ProductMissingError(string message);
@@ -9,18 +9,7 @@ error OrderError(string message);
 error ReturnError(string message);
 error PaymentError(string message);
 
-contract Ownable {
-    address public owner;
-    
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Only the owner is allowed.");
-        _;
-    }
-    
-    constructor() {
-        owner = msg.sender;
-    }
-}
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract Store is Ownable {
 
@@ -57,7 +46,7 @@ contract Store is Ownable {
     event ReturnInitiated(uint indexed productId);
 
     modifier onlyCustomer() {
-        if (msg.sender == owner) {
+        if (msg.sender == owner()) {
             revert AuthorizationError("Not allowed for the owner.");
         }
         _;

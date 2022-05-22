@@ -53,7 +53,7 @@ describe("Store", function () {
     await expect(
       store.connect(customer1).addProduct(555, 1, 3)
     ).to.be.revertedWith(
-      "VM Exception while processing transaction: reverted with reason string 'Only the owner is allowed.'"
+      "VM Exception while processing transaction: reverted with reason string 'Ownable: caller is not the owner'"
     );
   });
 
@@ -77,7 +77,7 @@ describe("Store", function () {
     await expect(
       store.connect(customer1).updateQuantity(888, 0)
     ).to.be.revertedWith(
-      "VM Exception while processing transaction: reverted with reason string 'Only the owner is allowed.'"
+      "VM Exception while processing transaction: reverted with reason string 'Ownable: caller is not the owner'"
     );
   });
 

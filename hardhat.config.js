@@ -29,7 +29,7 @@ task("deploy-ropsten", "Deploy to Ropsten test network")
  * @type import('hardhat/config').HardhatUserConfig
  */
 module.exports = {
-  solidity: "0.8.9",
+  solidity: "0.8.5",
   networks: {
     ropsten: {
       url: `${process.env.ROPSTEN_INFURA_URL}${process.env.ROPSTEN_INFURA_APIKEY}`,

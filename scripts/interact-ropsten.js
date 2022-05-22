@@ -18,7 +18,7 @@ const Store = require("../artifacts/contracts/Store.sol/Store.json");
   );
 
   const storeContract = new hre.ethers.Contract(
-    "0x495C492471d38EE9E8486725360D5A0C0eb45C06",
+    "0xb0f22baB48D4Db3A06f6b3f8ad9eA1bf1518D292",
     Store.abi,
     wallet1
   );
