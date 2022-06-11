@@ -9,9 +9,14 @@ error OrderError(string message);
 error ReturnError(string message);
 error PaymentError(string message);
 
+import "hardhat/console.sol";
+
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+import "./LimeToken.sol";
+
 contract Store is Ownable {
+    LimeToken private token;
 
     /// @dev for fast lookup whether a product is already added to the store
     mapping (uint => bool) private productsCatalog;
@@ -57,6 +62,41 @@ contract Store is Ownable {
             revert ProductMissingError("");
         }
         _;
+    }
+
+    receive() external payable {
+        wrap();
+    }
+
+    constructor() {
+        // token = LimeToken(tokenAddress);
+        token = new LimeToken();
+    }
+
+    function wrap() public payable {
+        require(msg.value > 0, "Amount should be at least 1 wei");
+        // eoa (msg.sender) -> ETH wrap()
+        // store contract (this) owner -> mint() LMT
+        token.mint(msg.sender, msg.value);
+        // token.approve(address(this), msg.value);
+        // token.approve(address(token), msg.value);
+        token.approve(msg.sender, msg.value);
+        console.log(token.allowance(address(this), msg.sender));
+    }
+
+    function unwrap(uint256 amount) public {
+        require(amount > 0, "Amount should be at least 1 wei");
+        // ex. account (msg.sender) -> unwrap()
+        // store contract (this) -> transferFrom()
+        // eoa <- ETH
+        // store contract <- MLT burn
+        token.transferFrom(msg.sender, address(this), amount);
+        token.burn(amount);
+        payable(msg.sender).transfer(amount);
+    }
+
+    function getTokenBalance() external view returns (uint256) {
+        return token.balanceOf(msg.sender);
     }
 
     /// @notice The owner of the store should be able to add new products and the quantity of them.

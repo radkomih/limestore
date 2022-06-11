@@ -18,21 +18,21 @@ const Store = require("../artifacts/contracts/Store.sol/Store.json");
   );
 
   const storeContract = new hre.ethers.Contract(
-    "0xb0f22baB48D4Db3A06f6b3f8ad9eA1bf1518D292",
+    "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6",
     Store.abi,
     wallet1
   );
 
   const addProductTx = await storeContract
     .connect(wallet1)
-    .addProduct(111, 2, 1); // .addProduct(222, 1, 1);
+    .addProduct(111, 1, 3);
   const addProductTxReceipt = await addProductTx.wait();
   if (addProductTxReceipt.status === 1) {
     console.log("Added new product");
   }
 
-  const buyProductTx = await storeContract.connect(wallet2).buyProduct(222, {
-    value: hre.ethers.utils.parseEther("1"),
+  const buyProductTx = await storeContract.connect(wallet2).buyProduct(111, {
+    value: hre.ethers.utils.parseEther("3"),
   });
   const buyProductTxReceipt = await buyProductTx.wait();
   if (buyProductTxReceipt.status === 1) {
@@ -41,8 +41,7 @@ const Store = require("../artifacts/contracts/Store.sol/Store.json");
 
   const returnProductTx = await storeContract
     .connect(wallet2)
-    .returnProduct(222);
-
+    .returnProduct(111);
   const returnProductTxReceipt = await returnProductTx.wait();
   if (returnProductTxReceipt.status === 1) {
     console.log("Returned product");

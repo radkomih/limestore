@@ -20,6 +20,38 @@ describe("Store", function () {
 
   beforeEach(async () => {
     [owner, customer1, customer2, customer3] = await ethers.getSigners();
+
+    // const Token = await ethers.getContractFactory("LimeToken", owner);
+    // const token = await Token.deploy();
+    // await token.deployed();
+
+    // const decimals = await token.connect(owner).decimals();
+
+    // const mintAmount = ethers.utils.parseUnits("10", decimals);
+    // const mintTx = await token.connect(owner).mint(owner.address, mintAmount);
+    // const mintTxReceipt = await mintTx.wait();
+    // if (mintTxReceipt.status !== 1) {
+    //   console.log("Mint Tx failed");
+    // }
+
+    // const transferAmount1 = ethers.utils.parseUnits("5", decimals);
+    // const transferTx = await token
+    //   .connect(owner)
+    //   .transfer(customer1.address, transferAmount1);
+    // const transferTxReceipt = await transferTx.wait();
+    // if (transferTxReceipt.status !== 1) {
+    //   console.log("Transfer Tx failed");
+    // }
+
+    // const transferAmount2 = ethers.utils.parseUnits("3", decimals);
+    // const transferTx2 = await token
+    //   .connect(owner)
+    //   .transfer(customer2.address, transferAmount2);
+    // const transferTx2Receipt = await transferTx2.wait();
+    // if (transferTx2Receipt.status !== 1) {
+    //   console.log("Transfer Tx failed");
+    // }
+
     const Store = await ethers.getContractFactory("Store", owner);
     store = await Store.deploy();
     await store.deployed();
@@ -269,5 +301,32 @@ describe("Store", function () {
     expect(await store.getTotalBallance()).to.equal(
       ethers.utils.parseEther("4")
     );
+  });
+
+  it("returns correct token balances", async function () {
+    // await owner.sendTransaction({
+    //   to: store.address,
+    //   value: ethers.utils.parseEther("2"),
+    // });
+
+    await store.connect(owner).wrap({ value: ethers.utils.parseEther("2") });
+
+    // await store.connect(owner).unwrap(ethers.utils.parseUnits("2", 18));
+
+    // expect(await store.connect(owner).getTokenBalance()).to.equal(
+    //   ethers.utils.parseEther("0")
+    // );
+
+    // expect(await store.connect(customer1).getTokenBalance()).to.equal(
+    //   ethers.utils.parseEther("5")
+    // );
+
+    // expect(await store.connect(customer2).getTokenBalance()).to.equal(
+    //   ethers.utils.parseEther("3")
+    // );
+
+    // expect(await store.connect(customer3).getTokenBalance()).to.equal(
+    //   ethers.utils.parseEther("0")
+    // );
   });
 });
